@@ -1,0 +1,19 @@
+diff --git a/tinydb/table.py b/tinydb/table.py
+index 76470aa..ae4536c 100644
+--- a/tinydb/table.py
++++ b/tinydb/table.py
+@@ -228,7 +228,13 @@ class Table:
+                 table[doc_id] = dict(document)
+ 
+         # See below for details on ``Table._update``
+-        self._update_table(updater)
++        saved_next_id = self._next_id
++        try:
++            self._update_table(updater)
++        except Exception:
++            # A failed batch must not consume document IDs
++            self._next_id = saved_next_id
++            raise
+ 
+         return doc_ids
+ 

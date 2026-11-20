@@ -1,0 +1,19 @@
+diff --git a/tinydb/queries.py b/tinydb/queries.py
+index e106c5d..34ba9ef 100644
+--- a/tinydb/queries.py
++++ b/tinydb/queries.py
+@@ -243,8 +243,12 @@ class Query(QueryInstance):
+             except (KeyError, TypeError):
+                 return False
+             else:
+-                # Perform the specified test
+-                return test(value)
++                # Perform the specified test. A value that cannot be
++                # compared with the operand (e.g. str vs int) does not match.
++                try:
++                    return test(value)
++                except TypeError:
++                    return False
+ 
+         return QueryInstance(
+             lambda value: runner(value),

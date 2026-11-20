@@ -1,0 +1,53 @@
+diff --git a/tests/test_drop_table_state.py b/tests/test_drop_table_state.py
+new file mode 100644
+index 0000000..2dd9675
+--- /dev/null
++++ b/tests/test_drop_table_state.py
+@@ -0,0 +1,21 @@
++from tinydb import TinyDB, where
++from tinydb.storages import MemoryStorage
++
++
++def test_held_table_after_drop_table():
++    db = TinyDB(storage=MemoryStorage)
++    t = db.table("t")
++    t.insert({"x": 1})
++    assert t.search(where("x") == 1) == [{"x": 1}]
++    db.drop_table("t")
++    assert t.search(where("x") == 1) == []
++    assert t.insert({"x": 2}) == 1
++
++
++def test_held_table_after_drop_tables():
++    db = TinyDB(storage=MemoryStorage)
++    t = db.table("t")
++    t.insert({"x": 1})
++    t.search(where("x") == 1)
++    db.drop_tables()
++    assert t.count(where("x") == 1) == 0
+diff --git a/tinydb/database.py b/tinydb/database.py
+index 0cd2b7e..196fb80 100644
+--- a/tinydb/database.py
++++ b/tinydb/database.py
+@@ -169,6 +169,11 @@ class TinyDB(TableBase):
+         # to the storage thereby returning to the initial state with no tables.
+         self.storage.write({})
+ 
++        # Instances the caller still holds must not serve stale state.
++        for table in self._tables.values():
++            table.clear_cache()
++            table._next_id = None
++
+         # After that we need to remember to empty the ``_tables`` dict, so we'll
+         # create new table instances when a table is accessed again.
+         self._tables.clear()
+@@ -183,6 +188,9 @@ class TinyDB(TableBase):
+         # If the table is currently opened, we need to forget the table class
+         # instance
+         if name in self._tables:
++            # An instance the caller still holds must not serve stale state.
++            self._tables[name].clear_cache()
++            self._tables[name]._next_id = None
+             del self._tables[name]
+ 
+         data = self.storage.read()

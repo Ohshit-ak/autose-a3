@@ -8,7 +8,7 @@ review posted on it. **A person always decides whether to merge.**
 | **Fork (where the workflow runs)** | https://github.com/Ohshit-ak/tinydb |
 | **Upstream + pinned commit** | [msiemens/tinydb](https://github.com/msiemens/tinydb) @ `edff96aeb2616402e9489d46e90a592c05565621` (`edff96a`, same as A2) |
 | **Fork base for all runs** | `edff96a` + 1 commit (CI trimmed to one job, A2 `ARCHITECTURE.md` added) + the AutoSE commit(s) |
-| **Models (Google Gemini)** | worker agents (Analyst, Architect, Builder, Tester, spec judge): `gemini-2.5-flash`; Reviewer: `gemini-2.5-pro`. Both are repo variables (`AUTOSE_WORKER_MODEL`, `AUTOSE_REVIEWER_MODEL`), see ADR-006 |
+| **Models (Google Gemini)** | worker agents (Analyst, Architect, Builder, Tester, spec judge): `gemini-3.5-flash` (thinking low); Reviewer: `gemini-3.6-flash`. Both are repo variables (`AUTOSE_WORKER_MODEL`, `AUTOSE_REVIEWER_MODEL`), see ADR-011 (supersedes ADR-006) |
 | **Report** | [`report.pdf`](report.pdf) |
 | **Demo video** | see the *Demo* section below |
 | **All runs, PRs and reviews** | [`results/runs.md`](results/runs.md) (generated from the GitHub API) |

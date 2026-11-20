@@ -33,8 +33,8 @@ api PUT "/repos/$FORK/actions/permissions/workflow" \
     '{"default_workflow_permissions":"read","can_approve_pull_request_reviews":true}' >/dev/null
 
 echo "== 3. repository variables (models, budget)"
-for kv in "AUTOSE_WORKER_MODEL=${AUTOSE_WORKER_MODEL:-gemini-2.5-flash}" \
-          "AUTOSE_REVIEWER_MODEL=${AUTOSE_REVIEWER_MODEL:-gemini-2.5-pro}" \
+for kv in "AUTOSE_WORKER_MODEL=${AUTOSE_WORKER_MODEL:-gemini-3.5-flash}" \
+          "AUTOSE_REVIEWER_MODEL=${AUTOSE_REVIEWER_MODEL:-gemini-3.6-flash}" \
           "AUTOSE_TOKEN_CAP=${AUTOSE_TOKEN_CAP:-2000000}"; do
   k=${kv%%=*}; v=${kv#*=}
   api POST "/repos/$FORK/actions/variables" "{\"name\":\"$k\",\"value\":\"$v\"}" >/dev/null 2>&1 || \

@@ -10,7 +10,7 @@ run exists yet. Every result in the report must come from the steps below.
       ("Safety and cost").
 - [ ] Check which models your key can use (the reviewer must be different from the worker):
       `curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" | grep '"name"'`.
-      If `gemini-2.5-pro` is not listed, or the free tier has no quota for it, set `AUTOSE_REVIEWER_MODEL`
+      Defaults are now `gemini-3.5-flash` (workers) and `gemini-3.6-flash` (reviewer), see ADR-011. If one stops answering, set `AUTOSE_REVIEWER_MODEL`
       to the strongest model you have, and write that down.
 - [ ] Rough request budget: one full run ≈ 100–200 model calls. The plan is 10 pipeline runs, 10
       seeded reviews and some rework rounds. The free tier will probably hit daily limits, so use a paid

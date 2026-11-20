@@ -32,7 +32,7 @@
 \begin{center}\small
 Fork: \url{https://github.com/Ohshit-ak/tinydb} (upstream \code{msiemens/tinydb} @ \code{edff96a}) \quad
 Submission repo: \url{https://github.com/Ohshit-ak/autose-a3}\\
-Models: Gemini \code{gemini-2.5-flash} (workers), \code{gemini-2.5-pro} (reviewer) \quad Full ADRs: \code{architecture/decisions/}
+Models: Gemini \code{gemini-3.5-flash} (workers), \code{gemini-3.6-flash} (reviewer) \quad Full ADRs: \code{architecture/decisions/}
 \end{center}
 
 %=====================================================================
@@ -115,7 +115,8 @@ ADR & Decision & Chosen & Main rejected option & Main reason & Status\\
 003 & Hand-offs & whole artifacts on need-to-know; structured feedback excerpts & shared transcript / LLM summaries & independence (Tester, Reviewer) and less injection surface; artifacts are small & Accepted\\
 004 & State & workflow artifacts + one issue state comment; nothing on the PR branch & artifacts committed on the PR branch & the Reviewer sees the repo at head, so committed artifacts would leak reasoning & Accepted\\
 005 & Tools & hand-written function tools, path jail, sandbox user; GitHub only in code jobs & GitHub MCP / generic bash for agents & least privilege that we can verify ourselves & Accepted\\
-006 & Models & Flash for workers, Pro for the Reviewer & Pro everywhere / same model for the Reviewer & cost and rate limits vs.\ less correlated review errors & Accepted\\
+006 & Models & 2.5 Flash workers, 2.5 Pro reviewer & Pro everywhere & cost/rate limits vs.\ less correlated review errors & Superseded\\
+011 & Models (new) & 3.5 Flash (low thinking) workers, 3.6 Flash reviewer & 4-hydrogen reviewer & 2.5 unavailable to new keys; latency is the binding limit & Accepted\\
 007 & Checks & deterministic checks; LLM only judges AC testability; code decides & LLM judge per stage & judges can be argued with; checks must be reproducible & Accepted\\
 008 & Reviewer independence & own job, token, model, inputs, adversarial evidence-based prompt & same job, new session & independence enforced by mechanisms, not convention & Accepted\\
 009 & Safety \& failures & budgets at every level; capability containment over injection detection & LLM injection classifier & a hijacked agent can at most produce a bad diff & Accepted\\

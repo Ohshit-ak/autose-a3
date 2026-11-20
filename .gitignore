@@ -1,0 +1,5 @@
+report_src/*.aux
+report_src/*.log
+report_src/*.out
+results/artifacts/**/*.bundle
+__pycache__/

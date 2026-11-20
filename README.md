@@ -64,8 +64,8 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 * The model key is a repository secret (`GEMINI_API_KEY`). It is never in code, logs or prompts. Model-written
   code runs as an unprivileged sandbox user with an empty environment (ADR-005/009).
 * Per-run token cap (`AUTOSE_TOKEN_CAP`, default 2M), step budgets per agent, per-job timeouts (ADR-009).
-* A spending cap was set on the Gemini API project before the first run. The total tokens used are reported in
-  `results/runs.md` and in the report (summed from every run's `usage.jsonl`).
+* **TODO (owner):** set a spending cap / budget on the Gemini API project *before the first run* and state it here.
+  The total tokens used are reported in `results/runs.md` and in the report (summed from every run's `usage.jsonl`).
 * The workflow only acts on the fork. It never merges, and it posts reviews as `COMMENT`, never `APPROVE`.
 
 ## Demo
@@ -76,6 +76,8 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 
 Following the course policy: a coding agent (Claude Code) helped substantially with this assignment.
 It drafted the workflow YAML, the agent harness (`autose/`), the helper scripts, the hidden
-tests and seeded PRs, and first drafts of the views and ADRs. I reviewed all generated code and text.
-The design choices in the ADRs, and the reasoning behind them, are mine: I checked them against the
-runs and revised them. All runs, PRs and reviews listed in `results/runs.md` are real GitHub Actions runs.
+tests and seeded PRs, and first drafts of the views and ADRs.
+
+**TODO (owner, before submitting):** describe how you reviewed the generated code and text, and
+what you changed in the ADRs to make the decisions and reasoning your own. All runs, PRs and reviews
+listed in `results/runs.md` must be real GitHub Actions runs, and they are generated from the API.

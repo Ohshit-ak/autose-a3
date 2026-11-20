@@ -16,6 +16,12 @@ api() { # method path [json]
   curl -fsS -X "$1" -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
        -H "X-GitHub-Api-Version: 2022-11-28" "$API$2" ${3:+--data "$3"}; }
 
+echo "== 0. token check (needs scopes: repo, workflow; you must be admin of $FORK)"
+scopes=$(curl -fsSI -H "Authorization: Bearer $GH_TOKEN" $API/user | tr -d '\r' | sed -n 's/^x-oauth-scopes: //Ip')
+echo "  token scopes: ${scopes:-<fine-grained token: make sure it has Contents, Workflows, Administration, Issues, Pull requests, Actions, Variables = read/write>}"
+if [ -n "$scopes" ] && ! grep -q workflow <<<"$scopes"; then echo "ERROR: token lacks the 'workflow' scope (needed to push .github/workflows)"; exit 1; fi
+api GET "/repos/$FORK" | python3 -c 'import json,sys;d=json.load(sys.stdin);assert d["permissions"]["admin"],"not admin";assert d.get("fork"),"not a fork";print("  repo ok:",d["full_name"],"fork of",d["parent"]["full_name"])'
+
 echo "== 1. push main (edff96a + CI trim + AutoSE) and make it the default branch"
 git -C "$LOCAL" push -f "https://x-access-token:${GH_TOKEN}@github.com/${FORK}.git" main:main
 api PATCH "/repos/$FORK" '{"default_branch":"main","has_issues":true}' >/dev/null
@@ -39,19 +45,10 @@ echo "== 4. labels"
 for l in "autose:0e8a16" "autose:failed:b60205" "autose:changes-requested:d93f0b" \
          "autose:reviewer-approved:0e8a16" "autose:ready-for-human:1d76db"; do
   name=${l%:*}; color=${l##*:}
-  api POST "/repos/$FORK/labels" "{\"name\":\"$name\",\"color\":\"$color\"}" >/dev/null 2>&1 || true
+  api POST "/repos/$FORK/labels" "{\"name\":\"$name\",\"color\":\"$color\"}" >/dev/null 2>&1 || echo "  (label $name exists)"
 done
 
-echo "== 5. protect main: no direct pushes (PR required, admins included)"
-# 0 required approvals so the single owner can still merge a PR; merging stays a human action.
-api PUT "/repos/$FORK/branches/main/protection" '{
-  "required_status_checks": null,
-  "enforce_admins": true,
-  "required_pull_request_reviews": {"required_approving_review_count": 0},
-  "restrictions": null,
-  "allow_force_pushes": false,
-  "allow_deletions": false
-}' >/dev/null
+echo "== 5. (branch protection is a separate step: tools/protect_main.sh, run it after the smoke run)"
 
 echo "== 6. open the five issues (in order, so they get numbers #1..#5)"
 for f in "$HERE"/experiment/issues/issue-*.md; do
@@ -86,4 +83,5 @@ echo
 echo "Done. Remaining manual steps:"
 echo "  * Settings > Secrets and variables > Actions > New secret: GEMINI_API_KEY"
 echo "  * Set a spending cap / budget on the Google AI Studio / Cloud billing project"
-echo "  * Trigger: add label 'autose' to an issue, or comment '/autose'"
+echo "  * Smoke run: add label 'autose' to issue #3, check the run end to end"
+echo "  * Then: bash tools/protect_main.sh   (no direct pushes to main)"

@@ -10,7 +10,7 @@ review posted on it. **A person always decides whether to merge.**
 | **Fork base for all runs** | `edff96a` + 1 commit (CI trimmed to one job, A2 `ARCHITECTURE.md` added) + the AutoSE commit(s) |
 | **Models (Google Gemini, free tier)** | worker agents (Analyst, Architect, Builder, Tester, spec judge): `gemini-3.5-flash-lite` with a fallback pool; Reviewer: `gemini-3.1-flash-lite` with a separate pool. Both are repo variables (`AUTOSE_WORKER_MODEL`, `AUTOSE_REVIEWER_MODEL`), see ADR-011 (supersedes ADR-006) |
 | **Report** | [`report.pdf`](report.pdf) |
-| **Demo video** | see the *Demo* section below |
+| **Demo video** | [OneDrive link](https://iiithydresearch-my.sharepoint.com/:v:/g/personal/kandagatla_akshith_research_iiit_ac_in/IQAOQx1dtcKuQpejuJOXD8SgAW5ypn4amndHOBWMsUrMge8?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=XhbaCp) |
 | **All runs, PRs and reviews** | [`results/runs.md`](results/runs.md) (generated from the GitHub API) |
 
 ## How to trigger the workflow
@@ -70,8 +70,7 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 
 ## Demo
 
-[`demo.mp4`](demo.mp4) (3 min 18 s, dark mode): one complete real run, issue #3 → [run 44902438357](https://github.com/Ohshit-ak/tinydb/actions/runs/44902438357) → [PR #11](https://github.com/Ohshit-ak/tinydb/pull/11) → independent review. It is a narrated walkthrough built from the run's real screenshots, logs and artifacts by `tools/build_demo_video.py` (offline text-to-speech).
-
+https://iiithydresearch-my.sharepoint.com/:v:/g/personal/kandagatla_akshith_research_iiit_ac_in/IQAOQx1dtcKuQpejuJOXD8SgAW5ypn4amndHOBWMsUrMge8?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=XhbaCp
 ## AI use
 
 Following the course policy: a coding agent (Claude Code) helped substantially with this assignment.

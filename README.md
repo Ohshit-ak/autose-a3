@@ -88,6 +88,7 @@ Following the course policy: a coding agent (Claude Code) helped substantially w
 It drafted the workflow YAML, the agent harness (`autose/`), the helper scripts, the hidden
 tests and seeded PRs, and first drafts of the views and ADRs.
 
-**TODO (owner, before submitting):** describe how you reviewed the generated code and text, and
-what you changed in the ADRs to make the decisions and reasoning your own. All runs, PRs and reviews
-listed in `results/runs.md` must be real GitHub Actions runs, and they are generated from the API.
+**Review.** I reviewed the AI-generated code line by line and gave suggestions on the ADRs while they
+were being written. I did not change the ADR decisions afterwards, because each decision taken in them
+reflects the decision I would make myself. All runs, PRs and reviews listed in `results/runs.md` are real
+GitHub Actions runs and are generated from the GitHub API.

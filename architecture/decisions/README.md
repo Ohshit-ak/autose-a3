@@ -15,4 +15,5 @@ Superseded ADRs are kept; the superseding ADR links back.
 | [ADR-008](ADR-008.md) | D8 Reviewer independence | Accepted |
 | [ADR-009](ADR-009.md) | D9 Safety and failures | Accepted |
 | [ADR-010](ADR-010.md) | D10 Triggers | Accepted |
-| [ADR-011](ADR-011.md) | D6 Models (supersedes ADR-006) | Accepted |
+| [ADR-011](ADR-011.md) | D6 Models (supersedes ADR-006; amended 2026-11-21) | Accepted |
+| [ADR-012](ADR-012.md) | D4 State: release rebases onto moved default branch (amends ADR-004) | Accepted |

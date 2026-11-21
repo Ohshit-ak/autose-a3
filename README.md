@@ -8,7 +8,7 @@ review posted on it. **A person always decides whether to merge.**
 | **Fork (where the workflow runs)** | https://github.com/Ohshit-ak/tinydb |
 | **Upstream + pinned commit** | [msiemens/tinydb](https://github.com/msiemens/tinydb) @ `edff96aeb2616402e9489d46e90a592c05565621` (`edff96a`, same as A2) |
 | **Fork base for all runs** | `edff96a` + 1 commit (CI trimmed to one job, A2 `ARCHITECTURE.md` added) + the AutoSE commit(s) |
-| **Models (Google Gemini)** | worker agents (Analyst, Architect, Builder, Tester, spec judge): `gemini-3.5-flash` (thinking low); Reviewer: `gemini-3.6-flash`. Both are repo variables (`AUTOSE_WORKER_MODEL`, `AUTOSE_REVIEWER_MODEL`), see ADR-011 (supersedes ADR-006) |
+| **Models (Google Gemini, free tier)** | worker agents (Analyst, Architect, Builder, Tester, spec judge): `gemini-3.5-flash-lite` with a fallback pool; Reviewer: `gemini-3.1-flash-lite` with a separate pool. Both are repo variables (`AUTOSE_WORKER_MODEL`, `AUTOSE_REVIEWER_MODEL`), see ADR-011 (supersedes ADR-006) |
 | **Report** | [`report.pdf`](report.pdf) |
 | **Demo video** | see the *Demo* section below |
 | **All runs, PRs and reviews** | [`results/runs.md`](results/runs.md) (generated from the GitHub API) |
@@ -70,7 +70,7 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 
 ## Demo
 
-*(link added after recording)*
+[`demo.mp4`](demo.mp4) (3 min 19 s): one complete real run, issue #3 → [run 44902438357](https://github.com/Ohshit-ak/tinydb/actions/runs/44902438357) → [PR #11](https://github.com/Ohshit-ak/tinydb/pull/11) → independent review. It is a narrated walkthrough built from the run's real screenshots, logs and artifacts by `tools/build_demo_video.py` (offline text-to-speech).
 
 ## AI use
 

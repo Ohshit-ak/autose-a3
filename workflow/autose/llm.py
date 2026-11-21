@@ -82,17 +82,23 @@ class Usage:
                 f"token budget exceeded: {self.total} > {self.cap}")
 
 
-_client: genai.Client | None = None
+_clients: list[genai.Client] = []
+_key_idx = 0  # index of the key currently in use
+
+
+def _keys() -> list[str]:
+    keys = [k.strip() for k in (os.environ.get("GEMINI_API_KEYS") or "").split(",") if k.strip()]
+    if not keys and os.environ.get("GEMINI_API_KEY"):
+        keys = [os.environ["GEMINI_API_KEY"]]
+    if not keys:
+        raise RuntimeError("no Gemini key: set GEMINI_API_KEYS (or GEMINI_API_KEY)")
+    return keys
 
 
 def client() -> genai.Client:
-    global _client
-    if _client is None:
-        key = os.environ.get("GEMINI_API_KEY")
-        if not key:
-            raise RuntimeError("GEMINI_API_KEY is not set")
-        _client = genai.Client(api_key=key)
-    return _client
+    if not _clients:
+        _clients.extend(genai.Client(api_key=k) for k in _keys())
+    return _clients[_key_idx]
 
 
 def check_models(*model_ids: str) -> None:
@@ -108,24 +114,83 @@ def check_models(*model_ids: str) -> None:
             f"available gemini models: {gem}")
 
 
+# ADR-011 (amended): every free-tier model has its own 20 requests/day. A role starts on its
+# configured model and moves to the next model of the *same* pool when that model's daily quota
+# is spent (or it stays unavailable). Worker and reviewer pools are disjoint (ADR-008).
+POOLS = [
+    [m.strip() for m in (os.environ.get("AUTOSE_WORKER_POOL") or
+     "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.6-flash,gemini-3.8-flash").split(",") if m.strip()],
+    [m.strip() for m in (os.environ.get("AUTOSE_REVIEWER_POOL") or
+     "gemini-3.1-flash-lite,gemini-3.7-flash,gemini-4-hydrogen").split(",") if m.strip()],
+]
+_exhausted: set[tuple[int, str]] = set()  # (key index, model)
+
+
+def _candidates(model: str) -> list[str]:
+    for pool in POOLS:
+        if model in pool:
+            i = pool.index(model)
+            return [m for m in pool[i:] + pool[:i] if (_key_idx, m) not in _exhausted]
+    return [model] if (_key_idx, model) not in _exhausted else []
+
+
+def _strip_signatures(contents: list) -> None:
+    """History produced by another model: use Gemini's documented bypass value for thought
+    signatures so the next model accepts the transcript."""
+    for c in contents:
+        for p in (getattr(c, "parts", None) or []):
+            if getattr(p, "thought_signature", None):
+                p.thought_signature = b"skip_thought_signature_validator"
+
+
 def _generate(model: str, contents: list, config: types.GenerateContentConfig):
-    """generate_content with exponential backoff on 429/5xx (ADR-009)."""
-    delay = 2.0
-    for attempt in range(7):
-        try:
-            return client().models.generate_content(
-                model=model, contents=contents, config=config)
-        except genai_errors.APIError as e:  # ClientError / ServerError
-            code = getattr(e, "code", None)
-            msg = str(e)
-            if code == 429 and ("PerDay" in msg or "billing" in msg.lower() and "free_tier" in msg.lower()):
-                raise QuotaExhausted(f"{model}: daily quota exhausted — {msg[:300]}") from e
-            if code in (429, 500, 502, 503, 504) and attempt < 6:
-                time.sleep(delay + random.random())
-                delay = min(delay * 2, 64)
-                continue
-            raise
-    raise RuntimeError("unreachable")
+    """generate_content with backoff on transient errors and pool fallback on exhausted
+    quota (ADR-009/011). Returns (response, model actually used)."""
+    global _key_idx
+    client()  # initialise the key list
+    tried = []
+    while True:
+        r = _try_pool(model, contents, config, tried)
+        if r is not None:
+            return r
+        if _key_idx + 1 < len(_clients):  # every model of this key is spent: next key
+            _key_idx += 1
+            print(f"[llm] all models exhausted on key #{_key_idx}; switching to key #{_key_idx + 1}", flush=True)
+            continue
+        raise QuotaExhausted(f"all models in the pool of {model} are exhausted/unavailable on all keys today (tried {tried})")
+
+
+def _try_pool(model: str, contents: list, config, tried: list):
+    for m in _candidates(model):
+        if tried:
+            _strip_signatures(contents)
+            print(f"[llm] falling back from {tried[-1]} to {m}", flush=True)
+        tried.append(m)
+        delay = 2.0
+        for attempt in range(5):
+            try:
+                return client().models.generate_content(model=m, contents=contents, config=config), m
+            except genai_errors.APIError as e:  # ClientError / ServerError
+                code = getattr(e, "code", None)
+                msg = str(e)
+                if code == 429 and ("PerDay" in msg or "free_tier" in msg.lower()):
+                    _exhausted.add((_key_idx, m))
+                    break
+                if code in (429, 500, 502, 503, 504) and attempt < 4:
+                    time.sleep(delay + random.random())
+                    delay = min(delay * 2, 32)
+                    continue
+                if code in (500, 502, 503, 504):  # still unavailable: try the next model
+                    break
+                raise
+            except Exception as e:  # transport errors (connection reset, server disconnected, timeouts)
+                if attempt < 4:
+                    print(f"[llm] transport error on {m}: {type(e).__name__}; retrying", flush=True)
+                    time.sleep(delay + random.random())
+                    delay = min(delay * 2, 32)
+                    continue
+                break
+    return None
 
 
 def _thinking(level: str | None):
@@ -141,8 +206,8 @@ def one_shot(model: str, system: str, prompt: str, usage: Usage, role: str,
         response_mime_type="application/json" if json_mode else None,
         thinking_config=_thinking(thinking),
     )
-    resp = _generate(model, [types.Content(role="user", parts=[types.Part(text=prompt)])], cfg)
-    usage.add(role, model, resp.usage_metadata)
+    resp, used = _generate(model, [types.Content(role="user", parts=[types.Part(text=prompt)])], cfg)
+    usage.add(role, used, resp.usage_metadata)
     return resp.text or ""
 
 
@@ -169,8 +234,12 @@ def run_agent(*, role: str, model: str, system: str, task: str,
 
     for step in range(1, max_steps + 1):
         result.steps = step
-        resp = _generate(model, contents, cfg)
-        usage.add(role, model, resp.usage_metadata)
+        if step == max_steps - 1 and len(contents) > 1:
+            # budget nearly spent: ask for the deliverable instead of more exploration (ADR-009)
+            contents.append(types.Content(role="user", parts=[types.Part(
+                text="Step budget almost exhausted: call the submit tool NOW with your best complete result.")]))
+        resp, used = _generate(model, contents, cfg)
+        usage.add(role, used, resp.usage_metadata)
         cand = resp.candidates[0] if resp.candidates else None
         if cand is None or cand.content is None:
             result.stop_reason = f"empty response (finish_reason={getattr(cand, 'finish_reason', None)})"

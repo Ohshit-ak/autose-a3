@@ -1,0 +1,7 @@
+{"ts": 1795269179.66099, "role": "reviewer", "model": "gemini-3.5-flash-lite", "prompt": 1904, "output": 10, "thoughts": 45, "total": 1959}
+{"ts": 1795269181.3699026, "role": "reviewer", "model": "gemini-3.5-flash-lite", "prompt": 2037, "output": 36, "thoughts": 78, "total": 2151}
+{"ts": 1795269188.6606214, "role": "reviewer", "model": "gemini-3.5-flash-lite", "prompt": 2581, "output": 17, "thoughts": 2019, "total": 4617}
+{"ts": 1795269198.918115, "role": "reviewer", "model": "gemini-3.5-flash", "prompt": 4111, "output": 138, "thoughts": 0, "total": 4249}
+{"ts": 1795269209.653717, "role": "reviewer", "model": "gemini-3.5-flash", "prompt": 4315, "output": 83, "thoughts": 721, "total": 5119}
+{"ts": 1795269234.8123527, "role": "reviewer", "model": "gemini-3.5-flash", "prompt": 5145, "output": 88, "thoughts": 105, "total": 5338}
+{"ts": 1795269261.970014, "role": "reviewer", "model": "gemini-3.5-flash", "prompt": 5387, "output": 682, "thoughts": 1092, "total": 7161}

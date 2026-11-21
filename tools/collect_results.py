@@ -70,7 +70,10 @@ def main() -> int:
                 dest = ART / str(r["id"]) / a["name"]
                 if not dest.exists():
                     try:
-                        z = zipfile.ZipFile(io.BytesIO(api(a["archive_download_url"], raw=True)))
+                        # curl drops the Authorization header on the cross-host redirect to blob storage
+                        blob = subprocess.run(["curl", "-fsSL", "-H", f"Authorization: Bearer {TOKEN}",
+                                               a["archive_download_url"]], capture_output=True, check=True).stdout
+                        z = zipfile.ZipFile(io.BytesIO(blob))
                         dest.mkdir(parents=True, exist_ok=True)
                         for n in z.namelist():
                             if not n.endswith(".bundle"):

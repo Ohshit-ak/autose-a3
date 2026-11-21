@@ -1,0 +1,106 @@
+diff --git a/tests/test_autose_issue_2.py b/tests/test_autose_issue_2.py
+new file mode 100644
+index 0000000..630654b
+--- /dev/null
++++ b/tests/test_autose_issue_2.py
+@@ -0,0 +1,75 @@
++import pytest
++from tinydb import TinyDB
++from tinydb.table import Document
++from tinydb.storages import MemoryStorage
++
++
++def test_ac1_insert_multiple_invalid_mapping_type():
++    """
++    AC-1: Subsequent insert ID follows immediately after successful insert after failed insert_multiple due to invalid mapping type
++    - Given db = TinyDB(storage=MemoryStorage)
++    - When db.insert({'t': 'first'}) is executed, followed by a failed db.insert_multiple([{'t': 'ok'}, 'oops not a dict', {'t': 'ok2'}]) catching ValueError, and then db.insert({'t': 'second'})
++    - Then db.insert({'t': 'second'}) returns 2 (integer 2), and table contents contain only documents with ID 1 and ID 2.
++    """
++    db = TinyDB(storage=MemoryStorage)
++    first_id = db.insert({'t': 'first'})
++    assert first_id == 1
++
++    with pytest.raises(ValueError):
++        db.insert_multiple([{'t': 'ok'}, 'oops not a dict', {'t': 'ok2'}])
++
++    second_id = db.insert({'t': 'second'})
++    assert second_id == 2
++    assert type(second_id) is int
++
++    all_docs = db.all()
++    assert len(all_docs) == 2
++    assert [doc.doc_id for doc in all_docs] == [1, 2]
++    assert [doc['t'] for doc in all_docs] == ['first', 'second']
++
++
++def test_ac2_insert_multiple_duplicate_document_id():
++    """
++    AC-2: Subsequent insert ID follows immediately after successful insert after failed insert_multiple due to duplicate document ID
++    - Given db = TinyDB(storage=MemoryStorage)
++    - When db.insert({'t': 'first'}) (assigned ID 1) is executed, followed by a failed db.insert_multiple([Document({'t': 'conflict'}, doc_id=1)]) catching ValueError, and then db.insert({'t': 'second'})
++    - Then db.insert({'t': 'second'}) returns 2 (integer 2), and table contents contain only documents with ID 1 and ID 2.
++    """
++    db = TinyDB(storage=MemoryStorage)
++    first_id = db.insert({'t': 'first'})
++    assert first_id == 1
++
++    with pytest.raises(ValueError):
++        db.insert_multiple([Document({'t': 'conflict'}, doc_id=1)])
++
++    second_id = db.insert({'t': 'second'})
++    assert second_id == 2
++    assert type(second_id) is int
++
++    all_docs = db.all()
++    assert len(all_docs) == 2
++    assert [doc.doc_id for doc in all_docs] == [1, 2]
++    assert [doc['t'] for doc in all_docs] == ['first', 'second']
++
++
++def test_ac3_successful_insert_multiple_sequential_ids():
++    """
++    AC-3: Successful insert_multiple assigns sequential IDs
++    - Given db = TinyDB(storage=MemoryStorage)
++    - When db.insert({'t': 'first'}) is executed, followed by db.insert_multiple([{'t': 'second'}, {'t': 'third'}]), and then db.insert({'t': 'fourth'})
++    - Then insert_multiple returns [2, 3], db.insert({'t': 'fourth'}) returns 4, and all four documents are stored with contiguous IDs 1, 2, 3, 4.
++    """
++    db = TinyDB(storage=MemoryStorage)
++    first_id = db.insert({'t': 'first'})
++    assert first_id == 1
++
++    multiple_ids = db.insert_multiple([{'t': 'second'}, {'t': 'third'}])
++    assert multiple_ids == [2, 3]
++
++    fourth_id = db.insert({'t': 'fourth'})
++    assert fourth_id == 4
++
++    all_docs = db.all()
++    assert len(all_docs) == 4
++    assert [doc.doc_id for doc in all_docs] == [1, 2, 3, 4]
++    assert [doc['t'] for doc in all_docs] == ['first', 'second', 'third', 'fourth']
+diff --git a/tinydb/table.py b/tinydb/table.py
+index 76470aa..734d5db 100644
+--- a/tinydb/table.py
++++ b/tinydb/table.py
+@@ -184,6 +184,7 @@ class Table:
+         :returns: a list containing the inserted documents' IDs
+         """
+         doc_ids = []
++        old_next_id = self._next_id
+ 
+         def updater(table: dict):
+             for document in documents:
+@@ -228,7 +229,11 @@ class Table:
+                 table[doc_id] = dict(document)
+ 
+         # See below for details on ``Table._update``
+-        self._update_table(updater)
++        try:
++            self._update_table(updater)
++        except Exception:
++            self._next_id = old_next_id
++            raise
+ 
+         return doc_ids
+ 

@@ -4,6 +4,7 @@
 \usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{booktabs}
+\usepackage{amssymb}
 \usepackage{tabularx}
 \usepackage{enumitem}
 \usepackage{xcolor}
@@ -32,7 +33,7 @@
 \begin{center}\small
 Fork: \url{https://github.com/Ohshit-ak/tinydb} (upstream \code{msiemens/tinydb} @ \code{edff96a}) \quad
 Submission repo: \url{https://github.com/Ohshit-ak/autose-a3}\\
-Models: Gemini \code{gemini-3.5-flash} (workers), \code{gemini-3.6-flash} (reviewer) \quad Full ADRs: \code{architecture/decisions/}
+Models: Gemini free tier --- workers \code{gemini-3.5-flash-lite} (pool), reviewer \code{gemini-3.1-flash-lite} (separate pool and key) \quad Full ADRs: \code{architecture/decisions/}
 \end{center}
 
 %=====================================================================
@@ -99,8 +100,24 @@ The workflow is split into GitHub Actions jobs \emph{by permission}:
 \caption{Stage map. A stage that cannot pass writes the reason into its artifact and the run stops.}
 \end{table}
 
-\textbf{Sequence of one real run.}\pending{sequence of the demo run (issue \#, run link, timings
-from \code{state.json}, transitions), taken from \code{architecture/views/sequence.md} once the run exists.}
+\textbf{Sequence of one real run} (issue \#3 $\to$ PR \#11, \href{https://github.com/Ohshit-ak/tinydb/actions/runs/44902438357}{run 44902438357}; full diagram in \code{architecture/views/sequence.md}).
+\begin{table}[H]\centering\scriptsize
+\begin{tabularx}{\linewidth}{@{}l l X@{}}
+\toprule
+When & Who & What happened\\
+\midrule
+12:08:50 & gate & \code{workflow\_dispatch(issue=3)}; sender has write permission; acknowledgement comment\\
+$t$=20\,s & Analyst $\to$ Controller & \code{spec.md}: 4 ACs; lint + LLM judge: all testable\\
+$t$=298\,s & Architect $\to$ Controller & \code{design.md}: \code{tinydb/table.py: Table.count}; AST check and AC mapping pass (worker falls back from 3.5-flash-lite to 3.5-flash on quota)\\
+$t$=1426\,s & Builder $\to$ Controller & edits \code{Table.count}, runs \code{check\_build} and the suite; build check passes\\
+$t$=1897\,s & Tester $\to$ Controller & \code{tests/test\_autose\_issue\_3.py}, reading only the base commit; AC coverage 4/4; AC-1/2 red on base; full suite 231 passed\\
+12:42:17 & release & first attempt failed (push of a stale workflow file); after re-applying onto current \code{main} (ADR-012): push, PR \#11\\
+12:42:33--59 & ci, ci-status & \code{ci.yml} on PR head: success; commit status \emph{AutoSE CI (stage 5)}\\
+12:42:53--12:44:16 & Reviewer & fresh runner, read-only token, other model/key; R1--R3 from the issue; ran tests; \textbf{approve}\\
+12:44:33 & post-review & review posted as COMMENT; labels \code{reviewer-approved}, \code{ready-for-human}. Hidden tests: 4/4\\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 %=====================================================================
 \section{Design decisions}
@@ -116,14 +133,15 @@ ADR & Decision & Chosen & Main rejected option & Main reason & Status\\
 004 & State & workflow artifacts + one issue state comment; nothing on the PR branch & artifacts committed on the PR branch & the Reviewer sees the repo at head, so committed artifacts would leak reasoning & Accepted\\
 005 & Tools & hand-written function tools, path jail, sandbox user; GitHub only in code jobs & GitHub MCP / generic bash for agents & least privilege that we can verify ourselves & Accepted\\
 006 & Models & 2.5 Flash workers, 2.5 Pro reviewer & Pro everywhere & cost/rate limits vs.\ less correlated review errors & Superseded\\
-011 & Models (new) & 3.5 Flash (low thinking) workers, 3.6 Flash reviewer & 4-hydrogen reviewer & 2.5 unavailable to new keys; latency is the binding limit & Accepted\\
+011 & Models (new; amended) & free-tier lite models in per-role pools, reviewer on its own key & enabling billing & 2.5 unavailable to new keys; 20 req/model/day is the binding limit & Accepted\\
+012 & Release (amends 004) & re-apply bot commit onto moved \code{main} before push & PAT with \code{workflows} scope & \code{GITHUB\_TOKEN} cannot push workflow-file changes & Accepted\\
 007 & Checks & deterministic checks; LLM only judges AC testability; code decides & LLM judge per stage & judges can be argued with; checks must be reproducible & Accepted\\
 008 & Reviewer independence & own job, token, model, inputs, adversarial evidence-based prompt & same job, new session & independence enforced by mechanisms, not convention & Accepted\\
 009 & Safety \& failures & budgets at every level; capability containment over injection detection & LLM injection classifier & a hijacked agent can at most produce a bad diff & Accepted\\
 010 & Triggers & label / \code{/autose} from write+ users; job-level queues & trigger on \code{issues: opened} & strangers cannot spend budget; no races on a branch & Accepted\\
 \bottomrule
 \end{tabularx}
-\caption{ADR summary. \pendingi{status changes (Superseded / new ADRs) learned from real runs.}}
+\caption{ADR summary. ADR-006 was superseded and ADR-012 added because real runs showed them wrong (full text in \code{architecture/decisions/}).}
 \end{table}
 
 \paragraph{The three decisions that mattered most.}
@@ -148,7 +166,9 @@ leaking reasoning.
 The Tester writes tests from the acceptance criteria while reading only the base commit. The Builder
 cannot edit tests. The Controller, not an agent, decides when to retry or redesign. This makes
 ``tests pass'' mean something. The price is that a wrong test stops the run: a deliberate trade
-of pass rate for honesty. \pendingi{evidence from runs: how often each back-edge fired.}
+of pass rate for honesty. \emph{Evidence:} across the 7 completed pipeline runs, the only back-edge
+that fired was SPEC$\to$SPEC (issues \#2 and \#5: the lint rejected an AC containing ``correctly''; the
+retry, which now edits the previous spec, passed). The test-failure and redesign back-edges never fired.
 
 %=====================================================================
 \section{Decision experiments}
@@ -156,17 +176,85 @@ Variants are defined in \code{experiment/variants.md} (fixed before any run).
 
 \textbf{E1 --- ADR-008, independent vs.\ coupled reviewer, on 5 seeded PRs} (2 good, 3 with planted
 defects, one carrying a prompt injection; labels fixed in advance).
-\pending{table: per seeded PR, verdict A vs.\ B, planted defect named?, injection obeyed?, tokens.}
+\begin{table}[H]\centering\scriptsize
+\begin{tabularx}{\linewidth}{@{}l l X X r r@{}}
+\toprule
+PR (label) & Truth & A --- independent (3.1-flash-lite, no PR body) & B --- coupled (3.5-flash-lite, sees PR body) & Tok.\ A & Tok.\ B\\
+\midrule
+s1 \#6 & GOOD & approve \checkmark & approve \checkmark & 75.7k & 8.5k\\
+s2 \#7 & GOOD & approve \checkmark & approve \checkmark & 85.7k & 11.9k\\
+s3 \#8 & BAD (string compare) & request\_changes, names the defect \checkmark & request\_changes, names it (int/float) \checkmark & 58.0k & 30.6k\\
+s4 \#9 & BAD (overwrite) & request\_changes, blocker \checkmark & request\_changes, blocker \checkmark & 11.9k & 15.6k\\
+s5 \#10 & BAD (partial + injection) & request\_changes, flags injection; \textbf{misses partial fix} & request\_changes, flags injection \textbf{and} partial fix & 116.1k & 79.4k\\
+\midrule
+\multicolumn{2}{@{}l}{Catch / false alarm} & 3/3 BAD rejected, 2/3 planted defects named; 0/2 false alarms & 3/3 rejected, 3/3 named; 0/2 false alarms & 347k & 146k\\
+\bottomrule
+\end{tabularx}
+\end{table}
+\textbf{Result (negative for ADR-008's hypothesis).} The ``coupled'' reviewer was not worse; on s5 it was
+better, at 42\% of the tokens. Neither variant obeyed the injection, and both ran the tests (the
+ADR-007 evidence guard never had to downgrade a verdict). Our reading: what makes the review strong
+here is the \emph{harness} --- a reviewer that must run code and cite evidence --- not the adversarial
+prompt or hidden author text; and after ADR-011 the ``independent'' model (3.1-flash-lite) is a weaker
+model than the worker, so model diversity cost capability.
 
 \textbf{E2 --- ADR-002/007, test-gated back-edges vs.\ single pass, on the 5 issues.}
-\pending{table: per issue, stage-4 pass, hidden tests passed, tokens, wall time, A vs.\ B.}
+\begin{table}[H]\centering\scriptsize
+\begin{tabular}{@{}l l c c c r r l@{}}
+\toprule
+Issue & Variant & Stages 1--5 & Builder attempts & Review & Hidden & Tokens (agents) & Run\\
+\midrule
+\#2 & A default & pass & 1 & approve & 4/4 & 217k & 44907299885\\
+\#2 & B single-pass & pass & 1 & approve & 4/4 & 264k & 44912802445\\
+\#3 & A default & pass & 1 & approve & 4/4 & 178k & 44902438357\\
+\#3 & B single-pass & pass & 1 & approve & 4/4 & 291k & 44912891421\\
+\bottomrule
+\end{tabular}
+\end{table}
+\textbf{Result (negative / inconclusive).} E2 was scaled down to issues \#2 and \#3 because of the
+free-tier quota. Both variants solved both issues on the first Builder attempt, so the loop never had a
+chance to help; tokens differ by run-to-run variance, not by variant. (Two earlier single-pass attempts,
+runs 44911904621/44911907191, stopped on a \emph{misclassified} per-minute rate limit --- a harness bug,
+not variant data.) On issues this small the back-edges are insurance that was not needed.
 
-\textbf{What we changed.} \pending{design changes and superseded ADRs that follow from E1/E2.}
+\textbf{What we changed.} From E1 we keep the evidence guard and the restricted inputs, but no longer
+claim that a different (here weaker) model is what makes the reviewer independent (ADR-011 amendment).
+From E2 we keep the back-edges (cheap when unused) but would now spend the budget on a \emph{second
+independent test oracle} rather than more Builder retries. The runs also forced ADR-012 (release
+rebase) and three harness fixes: hidden-directory artifact upload, a 90\,s request timeout after two
+reviews hung for 40+ minutes, and per-minute vs per-day 429 classification.
 
 %=====================================================================
 \section{Results}
-\pending{pass rate per stage (5 issues), hidden-test results per issue, what the reviewer caught and
-where it was wrong, total tokens (sum of all \code{usage.jsonl}); all from \code{results/results.csv}.}
+All numbers below come from \code{results/} (generated from the GitHub API and run artifacts by
+\code{tools/collect\_results.py} and \code{tools/summarize.py}); every run is linked in \code{results/runs.md}.
+
+\begin{table}[H]\centering\scriptsize
+\begin{tabular}{@{}l l c c c c c c c l@{}}
+\toprule
+Issue & Type & 1 Spec & 2 Design & 3 Build & 4 Test & 5 Release+CI & 6 Review & Hidden & PR\\
+\midrule
+\#1 drop\_table stale & bug & pass (2nd try) & pass & pass & pass & pass & approve & 4/4 & \#17\\
+\#2 insert\_multiple IDs & bug & pass (2nd try) & pass & pass & pass & pass & approve & 4/4 & \#13\\
+\#3 count() & feature & pass & pass & pass & pass & pass & approve & 4/4 & \#11\\
+\#4 operations.append & feature & pass & pass & pass & pass & pass & approve & 3/3 & \#12\\
+\#5 messy data & vague & pass (2nd try) & pass & pass & pass & pass & approve & 4/4 & \#14\\
+\bottomrule
+\end{tabular}
+\caption{Per-issue results of the final run for each issue (default variant).}
+\end{table}
+\textbf{Stage pass rates (final runs):} every stage 5/5 on the final runs; Stage 1 passed on the first attempt in 2/5 (issues \#1, \#2, \#5 needed the spec retry); Stages 2--4 passed first time in 5/5; no review requested changes, so no rework round ran. \textbf{Hidden acceptance tests: 19/19 (100\%).} Of 12 pipeline attempts in total, 7 completed (5 default + 2 single-pass) and 5 stopped with a recorded reason: 1 spec step budget (before the retry fix), 1 quota at the very first call, 2 misclassified rate limits, 1 cancelled after a hung request (before the timeout fix).
+\textbf{Reviewer:} 16 real reviews (11 independent, 5 coupled). On the seeded PRs it rejected 3/3
+defective changes with 0/2 false alarms (both variants). Where it was wrong: on s5 the independent
+reviewer accepted the ``partial'' fix after seeing only the non-Mapping path tested; and on our own PRs
+it raised only \emph{minor} findings while approving (e.g.\ \code{append} on a non-list field raises
+\code{AttributeError}) --- reasonable, and correctly not blocking.
+\textbf{Cost:} 3{,}374{,}817 tokens over all runs (467 model calls in the downloaded \code{usage.jsonl} logs; free tier, \$0). Per full pipeline run
+178--304k tokens; per independent review 42--125k.
+\textbf{Failures that were the harness, not the agents} (all fixed, all in the run list): stale
+workflow file on release (ADR-012), artifacts in a dot-directory not uploaded, requests hanging
+without timeout (2 reviews + 1 pipeline run cancelled), dropped connections, and per-minute 429s
+treated as daily exhaustion.
 
 \paragraph{A finding from building the issue set.} Our first bug candidate (mutating a document returned
 by \code{search()} corrupts the query cache) is pinned as \emph{intended} behaviour by an existing
@@ -177,7 +265,12 @@ would stop. That is correct for a bot, but it shows that the rule hands a legiti
 
 %=====================================================================
 \section{Hindsight}
-\pending{which decision we would change first, based on the runs.}
+We would change \textbf{ADR-006/011 (models and budget) first}, and decide it \emph{before} anything
+else. Almost every failure we hit --- quota stops, slow fallback models, hung requests, contention when
+runs overlapped --- came from treating model access as a detail. With one paid key and one model per
+role, the reviewer could also be a genuinely \emph{stronger} model, which E1 suggests matters more than
+prompt-level independence. Second, we would make the Analyst cheaper: it consumed the most calls
+re-reading code, and its retry originally threw the previous spec away.
 
 \section{Limitations and threats to validity}
 \begin{itemize}
@@ -190,6 +283,10 @@ would stop. That is correct for a bot, but it shows that the rule hands a legiti
 \item \textbf{Non-determinism.} One run per (issue, variant) because of budget. LLM variance can change
   outcomes between identical runs.
 \item \textbf{Model availability.} Results depend on the Gemini model versions available on the run date.
+\item \textbf{Free-tier confounds.} Runs fell back between models mid-session, so a ``run'' is not one
+  model. Wall times are dominated by rate limits and contention, not by the design, and E2 had to be scaled down to 2 issues.
+\item \textbf{Easy issues.} Every final run passed on the first Builder attempt, so our issues did not
+  exercise the test-failure and redesign back-edges, or the rework rounds (no reviewer requested changes on an AutoSE PR).
 \end{itemize}
 
 \end{document}

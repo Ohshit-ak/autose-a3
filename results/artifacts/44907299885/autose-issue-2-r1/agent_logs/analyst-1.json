@@ -1,0 +1,43 @@
+{
+  "role": "analyst",
+  "steps": 4,
+  "stop_reason": "submitted",
+  "tool_log": [
+    {
+      "step": 1,
+      "tool": "search_code",
+      "args": {
+        "pattern": "insert_multiple"
+      },
+      "result_head": "docs/changelog.rst:84: - Feature: Allow inserting ``Document`` instances using ``Table.insert_multiple``\ndocs/changelog.rst:587: - Added ``insert_multiple`` function\ndocs/usage.rst:267: In case you want to insert multiple documents, you can use ``db.insert_multiple(...)``:\ndocs/usage.rst:269: >>> db.insert_multiple([\ndocs/usage.rst:272: >>> db.insert_multiple({'int': 1, 'value': i} for i in range("
+    },
+    {
+      "step": 2,
+      "tool": "read_file",
+      "args": {
+        "end_line": 220,
+        "path": "tinydb/table.py",
+        "start_line": 170
+      },
+      "result_head": "  170|             # ``dict`` instance even if it was a different class that\n  171|             # implemented the ``Mapping`` interface\n  172|             table[doc_id] = dict(document)\n  173| \n  174|         # See below for details on ``Table._update``\n  175|         self._update_table(updater)\n  176| \n  177|         return doc_id\n  178| \n  179|     def insert_multiple(self, documents: Iterable[M"
+    },
+    {
+      "step": 3,
+      "tool": "read_file",
+      "args": {
+        "path": "tinydb/table.py",
+        "start_line": 221,
+        "end_line": 250
+      },
+      "result_head": "  221|                             self.document_id_class(i) for i in table.keys()\n  222|                         ) + 1\n  223|                     else:\n  224|                         next_id = 1\n  225|                 self._next_id = next_id\n  226|                 doc_id = self._get_next_id()\n  227|                 doc_ids.append(doc_id)\n  228|                 table[doc_id] = dict(document)\n  229"
+    },
+    {
+      "step": 4,
+      "tool": "submit",
+      "args": {
+        "spec_md": "# Spec \u2014 Document IDs skip numbers after a failed insert_multiple\n\n## 1. Source\nSRC-01: GitHub issue #2 (untrusted issue text):\n> When `insert_multiple` fails half way (one of the items in my batch was bad), nothing is inserted \u2014\n> good \u2014 but the next document I insert gets an ID that skips over the\u2026"
+      },
+      "result_head": "submitted"
+    }
+  ]
+}

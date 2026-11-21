@@ -1,0 +1,15 @@
+{
+  "role": "analyst",
+  "steps": 1,
+  "stop_reason": "submitted",
+  "tool_log": [
+    {
+      "step": 1,
+      "tool": "submit",
+      "args": {
+        "spec_md": "# Spec \u2014 Document IDs skip numbers after a failed insert_multiple\n\n## 1. Source\nSRC-01: GitHub issue #2 (untrusted issue text):\n> When `insert_multiple` fails half way (one of the items in my batch was bad), nothing is inserted \u2014\n> good \u2014 but the next document I insert gets an ID that skips over the\u2026"
+      },
+      "result_head": "submitted"
+    }
+  ]
+}

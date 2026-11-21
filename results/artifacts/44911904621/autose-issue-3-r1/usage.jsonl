@@ -1,0 +1,8 @@
+{"ts": 1795269818.3835897, "role": "analyst", "model": "gemini-3.5-flash-lite", "prompt": 9641, "output": 17, "thoughts": 112, "total": 9770}
+{"ts": 1795269819.2262046, "role": "analyst", "model": "gemini-3.5-flash-lite", "prompt": 9808, "output": 38, "thoughts": 27, "total": 9873}
+{"ts": 1795269820.0361526, "role": "analyst", "model": "gemini-3.5-flash-lite", "prompt": 10379, "output": 28, "thoughts": 37, "total": 10444}
+{"ts": 1795269868.9789562, "role": "analyst", "model": "gemini-3.5-flash", "prompt": 10379, "output": 38, "thoughts": 0, "total": 10417}
+{"ts": 1795269938.2491403, "role": "analyst", "model": "gemini-3.5-flash", "prompt": 10705, "output": 19, "thoughts": 0, "total": 10724}
+{"ts": 1795269939.1862986, "role": "analyst", "model": "gemini-3.5-flash-lite", "prompt": 10800, "output": 38, "thoughts": 0, "total": 10838}
+{"ts": 1795270025.0415096, "role": "analyst", "model": "gemini-3.5-flash", "prompt": 11289, "output": 1079, "thoughts": 0, "total": 12368}
+{"ts": 1795270136.4638677, "role": "spec_judge", "model": "gemini-3.6-flash", "prompt": 499, "output": 157, "thoughts": 0, "total": 656}

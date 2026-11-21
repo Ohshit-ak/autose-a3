@@ -1,0 +1,38 @@
+{
+  "issue": 1,
+  "round": 1,
+  "mode": "full",
+  "target": "implementation",
+  "variant": "default",
+  "worker_model": "gemini-3.5-flash-lite",
+  "status": "running",
+  "history": [
+    {
+      "t": 0.5,
+      "from": "START",
+      "to": "SPEC",
+      "why": "issue #1, round 1"
+    },
+    {
+      "t": 11.2,
+      "from": "SPEC_CHECK",
+      "to": "SPEC",
+      "why": "spec check failed"
+    }
+  ],
+  "stages": {
+    "spec": {
+      "attempt": 1,
+      "pass": false,
+      "acs": [
+        "AC-1",
+        "AC-2",
+        "AC-3",
+        "AC-4"
+      ]
+    }
+  },
+  "started": 1795264788.3434734,
+  "base": "fe404753b2b61096371e5c5da244adb7f3cf63cf",
+  "tokens_total": 57894
+}

@@ -1,0 +1,103 @@
+diff --git a/docs/usage.rst b/docs/usage.rst
+index 9d61f5c..05ddf64 100644
+--- a/docs/usage.rst
++++ b/docs/usage.rst
+@@ -403,10 +403,12 @@ stored in the database. In this case ``db.contains(...)`` is your friend:
+ 
+ >>> db.contains(User.name == 'John')
+ 
+-In a similar manner you can look up the number of documents matching a query:
++In a similar manner you can look up the number of documents matching a query, or the total number of documents by calling ``db.count()`` without arguments:
+ 
+ >>> db.count(User.name == 'John')
+ 2
++>>> db.count()
++5
+ 
+ Recap
+ ^^^^^
+@@ -430,6 +432,8 @@ Let's summarize the ways to handle data:
+ +-------------------------------+---------------------------------------------------------------+
+ | ``db.contains(query)``        | Check if the database contains a matching document            |
+ +-------------------------------+---------------------------------------------------------------+
++| ``db.count()``                | Get the total number of documents                             |
+++-------------------------------+---------------------------------------------------------------+
+ | ``db.count(query)``           | Get the number of matching documents                          |
+ +-------------------------------+---------------------------------------------------------------+
+ 
+diff --git a/tests/test_autose_issue_3.py b/tests/test_autose_issue_3.py
+new file mode 100644
+index 0000000..1fb946c
+--- /dev/null
++++ b/tests/test_autose_issue_3.py
+@@ -0,0 +1,48 @@
++from tinydb import TinyDB, where
++from tinydb.storages import MemoryStorage
++
++
++def test_ac1_count_without_condition():
++    """
++    AC-1: Calling db.count() without arguments returns total document count (verifies FR-001)
++    Then count returns 3
++    """
++    db = TinyDB(storage=MemoryStorage)
++    db.insert_multiple([{'int': 1}, {'int': 2}, {'int': 3}])
++    count = db.count()
++    assert count == 3
++
++
++def test_ac2_count_with_query():
++    """
++    AC-2: Calling db.count(query) with a query condition works as before (verifies FR-002)
++    Then count returns 2
++    """
++    db = TinyDB(storage=MemoryStorage)
++    db.insert_multiple([{'int': 1}, {'int': 1}, {'int': 2}])
++    count = db.count(where('int') == 1)
++    assert count == 2
++
++
++def test_ac3_table_count_without_condition():
++    """
++    AC-3: Calling table.count() without arguments returns total table document count (verifies FR-001)
++    Then count returns 2
++    """
++    db = TinyDB(storage=MemoryStorage)
++    table = db.table('custom')
++    table.insert_multiple([{'char': 'a'}, {'char': 'b'}])
++    count = table.count()
++    assert count == 2
++
++
++def test_ac4_table_count_with_query():
++    """
++    AC-4: Existing query-based counting behaviour for tables remains unchanged (verifies FR-002)
++    Then count returns 1
++    """
++    db = TinyDB(storage=MemoryStorage)
++    table = db.table('custom')
++    table.insert_multiple([{'char': 'a'}, {'char': 'b'}])
++    count = table.count(where('char') == 'a')
++    assert count == 1
+diff --git a/tinydb/table.py b/tinydb/table.py
+index 76470aa..06bdfc1 100644
+--- a/tinydb/table.py
++++ b/tinydb/table.py
+@@ -706,13 +706,16 @@ class Table:
+         # Reset document ID counter
+         self._next_id = None
+ 
+-    def count(self, cond: QueryLike) -> int:
++    def count(self, cond: Optional[QueryLike] = None) -> int:
+         """
+         Count the documents matching a query.
+ 
+         :param cond: the condition use
+         """
+ 
++        if cond is None:
++            return len(self)
++
+         return len(self.search(cond))
+ 
+     def clear_cache(self) -> None:

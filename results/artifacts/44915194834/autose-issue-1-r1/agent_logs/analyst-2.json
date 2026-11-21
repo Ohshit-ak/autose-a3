@@ -1,0 +1,15 @@
+{
+  "role": "analyst",
+  "steps": 1,
+  "stop_reason": "submitted",
+  "tool_log": [
+    {
+      "step": 1,
+      "tool": "submit",
+      "args": {
+        "spec_md": "# Spec \u2014 Table still returns old documents after drop_table()\n\n## 1. Source\nSRC-01: GitHub issue #1\n> \"In our tests we keep a reference to a table, and reset the data between test cases with `db.drop_table(...)` (or `db.drop_tables()`). After the drop, the table object still finds the old documents \u2026"
+      },
+      "result_head": "submitted"
+    }
+  ]
+}

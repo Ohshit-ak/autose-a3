@@ -48,6 +48,16 @@ results/
 tools/                    setup_github.sh, dry_run.sh, run_hidden.sh, collect_results.py, sync_workflow.sh
 ```
 
+## Results at a glance
+
+| | |
+|---|---|
+| Issues solved end-to-end (issue → PR → CI → approved review) | **5 / 5** (PRs #17, #13, #11, #12, #14) |
+| Hidden acceptance tests on those PRs | **19 / 19** |
+| Seeded reviewer-check PRs | 3/3 defective PRs rejected, 0/2 false alarms (both reviewer variants) |
+| Decision experiments | E1 (reviewer independence) and E2 (test-gated back-edges): both **negative**, see report §3 |
+| Real Actions runs | 30, all linked in [`results/runs.md`](results/runs.md); per-run detail in [`results/summary.md`](results/summary.md) |
+
 ## Design in one paragraph
 
 Five LLM agents with separate sessions, prompts and tool sets (Analyst, Architect, Builder,
@@ -64,8 +74,9 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 * The model key is a repository secret (`GEMINI_API_KEY`). It is never in code, logs or prompts. Model-written
   code runs as an unprivileged sandbox user with an empty environment (ADR-005/009).
 * Per-run token cap (`AUTOSE_TOKEN_CAP`, default 2M), step budgets per agent, per-job timeouts (ADR-009).
-* **TODO (owner):** set a spending cap / budget on the Gemini API project *before the first run* and state it here.
-  The total tokens used are reported in `results/runs.md` and in the report (summed from every run's `usage.jsonl`).
+* All Gemini keys are **free-tier keys with no billing account attached**, so no money can be spent (the hard
+  limit is the free quota itself). Total usage over all runs: **3,374,817 tokens in 467 model calls**
+  (summed from every run's `usage.jsonl`, see `results/summary.md`).
 * The workflow only acts on the fork. It never merges, and it posts reviews as `COMMENT`, never `APPROVE`.
 
 ## Demo

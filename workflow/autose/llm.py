@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,7 +98,8 @@ def _keys() -> list[str]:
 
 def client() -> genai.Client:
     if not _clients:
-        _clients.extend(genai.Client(api_key=k) for k in _keys())
+        _clients.extend(genai.Client(api_key=k, http_options=types.HttpOptions(timeout=90_000))  # ms; a hung request becomes a retry
+                        for k in _keys())
     return _clients[_key_idx]
 
 
@@ -119,9 +121,9 @@ def check_models(*model_ids: str) -> None:
 # is spent (or it stays unavailable). Worker and reviewer pools are disjoint (ADR-008).
 POOLS = [
     [m.strip() for m in (os.environ.get("AUTOSE_WORKER_POOL") or
-     "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.6-flash,gemini-3.8-flash").split(",") if m.strip()],
+     "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.6-flash").split(",") if m.strip()],
     [m.strip() for m in (os.environ.get("AUTOSE_REVIEWER_POOL") or
-     "gemini-3.1-flash-lite,gemini-3.7-flash,gemini-4-hydrogen").split(",") if m.strip()],
+     "gemini-3.1-flash-lite,gemini-3.7-flash,gemini-3.8-flash,gemini-4-hydrogen").split(",") if m.strip()],
 ]
 _exhausted: set[tuple[int, str]] = set()  # (key index, model)
 
@@ -173,8 +175,17 @@ def _try_pool(model: str, contents: list, config, tried: list):
             except genai_errors.APIError as e:  # ClientError / ServerError
                 code = getattr(e, "code", None)
                 msg = str(e)
-                if code == 429 and ("PerDay" in msg or "free_tier" in msg.lower()):
+                if code == 429 and "PerDay" in msg:  # daily quota: this model is done for today
                     _exhausted.add((_key_idx, m))
+                    break
+                if code == 429:  # per-minute limit: wait as long as the API asks, then retry
+                    mm = re.search(r"retryDelay['\"]?:\s*['\"]?(\d+)", msg)
+                    wait = min(int(mm.group(1)) + 1, 90) if mm else delay
+                    print(f"[llm] rate limited on {m}; waiting {wait}s", flush=True)
+                    time.sleep(wait + random.random())
+                    delay = min(delay * 2, 32)
+                    if attempt < 4:
+                        continue
                     break
                 if code in (429, 500, 502, 503, 504) and attempt < 4:
                     time.sleep(delay + random.random())

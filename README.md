@@ -70,7 +70,7 @@ artifacts are kept off the PR branch so the Reviewer cannot read them. See
 
 ## Demo
 
-[`demo.mp4`](demo.mp4) (3 min 19 s): one complete real run, issue #3 → [run 44902438357](https://github.com/Ohshit-ak/tinydb/actions/runs/44902438357) → [PR #11](https://github.com/Ohshit-ak/tinydb/pull/11) → independent review. It is a narrated walkthrough built from the run's real screenshots, logs and artifacts by `tools/build_demo_video.py` (offline text-to-speech).
+[`demo.mp4`](demo.mp4) (3 min 18 s, dark mode): one complete real run, issue #3 → [run 44902438357](https://github.com/Ohshit-ak/tinydb/actions/runs/44902438357) → [PR #11](https://github.com/Ohshit-ak/tinydb/pull/11) → independent review. It is a narrated walkthrough built from the run's real screenshots, logs and artifacts by `tools/build_demo_video.py` (offline text-to-speech).
 
 ## AI use
 

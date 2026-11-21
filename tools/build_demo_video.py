@@ -12,7 +12,7 @@ W, H = 1920, 1080
 F = "/usr/share/fonts/truetype/dejavu/"
 font = lambda n, s: ImageFont.truetype(F + n, s)
 TITLE, BODY, MONO, SMALL = font("DejaVuSans-Bold.ttf", 46), font("DejaVuSans.ttf", 30), font("DejaVuSansMono.ttf", 22), font("DejaVuSans.ttf", 24)
-BG, ACC, FG = (250, 250, 252), (36, 41, 47), (30, 30, 30)
+BG, ACC, FG = (250, 250, 252), (219, 223, 230), (30, 30, 30)  # light header -> dark after the dark-mode filter
 RUN = "github.com/Ohshit-ak/tinydb/actions/runs/44902438357"
 
 
@@ -20,7 +20,7 @@ def frame(title, footer=""):
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
     d.rectangle([0, 0, W, 100], fill=ACC)
-    d.text((50, 25), title, font=TITLE, fill="white")
+    d.text((50, 25), title, font=TITLE, fill=(15, 15, 20))
     if footer:
         d.rectangle([0, H - 56, W, H], fill=(235, 236, 240))
         d.text((50, H - 44), footer, font=SMALL, fill=(80, 80, 80))
@@ -162,3 +162,6 @@ for i, (img, narration) in enumerate(slides, 1):
 subprocess.run([FF, "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(OUT / "list.txt"),
                 "-c", "copy", str(OUT / "demo.mp4")], check=True)
 print("total", round(sum(d for _, d in segs), 1), "s ->", OUT / "demo.mp4")
+
+# Dark mode (applied to the rendered video):
+#   ffmpeg -i demo.mp4 -vf "negate,hue=h=180" -c:a copy demo_dark.mp4
